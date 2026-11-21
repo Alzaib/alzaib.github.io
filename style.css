@@ -33,3 +33,7 @@ figure img{display:block;margin:0 auto}
 figcaption{color:var(--muted);font-size:.88rem;text-align:center;margin-top:6px}
 .tags{color:var(--muted);font-size:.88rem}
 .links a{margin-right:14px}
+p.eq{text-align:center;font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:1.1rem;margin:16px 0;line-height:1.9}
+.placeholder a{color:var(--accent)}
+ol.refs{font-size:.9rem;color:var(--muted)}
+ol.refs li{margin-bottom:6px;word-break:break-word}

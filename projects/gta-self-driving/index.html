@@ -11,36 +11,134 @@
 <main class="wrap">
 <p class="meta"><a href="../../index.html#projects">&larr; All projects</a></p>
 <h1>Building a Self-Driving Vehicle in GTA-V Using Deep Learning and a Convolutional Neural Network</h1>
-<p class="meta">September 2020</p>
-<h2>Summary</h2>
-<p>A self-driving vehicle built inside the video game GTA-V, using behaviour cloning with NVIDIA's PilotNet to predict steering and throttle from the hood camera, and a YOLOv3-Tiny object detector to slow or brake for vehicles and pedestrians ahead. Each network was trained on Google Colab with Keras.</p>
-<figure><img src="../../assets/gta-self-driving/hood-camera.png" alt="Hood camera view in GTA-V on a highway"><figcaption>The hood-camera view used for data collection and for the network's input.</figcaption></figure>
-<h2>Goal</h2>
-<p>The goal is to navigate highway and city-like environments with different traffic densities, using a self-generated dataset and an object detector for both lateral (steering) and longitudinal (throttle and braking) control. A game gives high-quality graphics, different weather and traffic conditions, and unexpected behaviour from nearby vehicles, without any hardware or risk.</p>
+<p class="meta">September 2020 &middot; <a href="https://github.com/Alzaib/Autonomous-Self-Driving-Car-GTA-5" rel="noopener noreferrer">GitHub</a></p>
+
+<!-- VIDEO: replace the # with your YouTube link -->
+<div class="placeholder">Demo video: <a href="#" rel="noopener noreferrer">Autonomous Vehicle in GTA-5 Using Deep Learning and YOLOv3 (YouTube)</a></div>
+
+<h2>Introduction and project background</h2>
+<p>Artificial intelligence is now widely used to perform tasks that were previously performed by humans. An artificial neural network can be trained to drive a vehicle without any human intervention, creating a safer driving environment. Such vehicles are equipped with hardware such as cameras, radar and LIDAR to collect data in real time. The data is passed into complex neural networks that predict outcomes and control the car. These networks can be built, trained and tested in a realistic 3D environment without putting anyone at risk.</p>
+<p>A simple self-driving vehicle can be built in a video game, without any of that hardware. High-quality graphics, different weather conditions, unexpected behaviour from nearby vehicles and varied traffic are a few of the many reasons that make Grand Theft Auto V an excellent choice for building and simulating a self-driving vehicle, as Sentdex demonstrated [1].</p>
+<p>The goal of this project is to develop a self-driving vehicle that uses computer vision to navigate highway and city-like environments with different traffic densities. The main objective is to train and test different convolutional neural networks on a self-generated dataset, and to integrate an object detection and localisation algorithm to enable both lateral and longitudinal control.</p>
+<p>Training an artificial neural network needs a lot of computation, powerful hardware such as GPUs, and machine learning frameworks such as Keras, TensorFlow or PyTorch. In this project each network is trained on Google Colab, which runs Python in the browser and gives free access to GPUs [2]. All the CNNs are built with Keras, a popular, easy-to-use framework that runs on top of TensorFlow for fast experimentation [3].</p>
+
+<h2>Convolutional neural networks</h2>
+<p>Convolutional neural networks, also known as ConvNets or CNNs, are among the most popular deep learning architectures for computer vision tasks such as object detection, classification and image reconstruction [4]. They are very effective at classifying images because they recognise the general patterns shared within a class. A CNN consists of hidden layers, such as convolutional and pooling layers, connected to a multilayer perceptron, also known as fully connected layers. Figure 1 shows a CNN classifying a handwritten four from the MNIST dataset.</p>
+<figure><img src="../../assets/gta-self-driving/cnn-mnist.png" alt="A CNN classifying a handwritten digit from MNIST"><figcaption>Figure 1: MNIST handwritten digit classification using a convolutional neural network [5]</figcaption></figure>
+<p>Convolutional layers extract the patterns or common features from images of the same class. An input image can be broken down into its pixels. In a grayscale image each pixel has an intensity from 0 to 255, where 0 is black and 255 is white. Such an input has dimensions [W × H × 1], where W is the width, H is the height and 1 is the depth of a single-channel (grayscale) image. For a colour image the depth increases to three, [W × H × 3], for the red, green and blue intensities at each pixel.</p>
+<p>The image becomes a 3-dimensional matrix of width, height and depth, which is passed into a convolutional layer and processed by a kernel matrix, also known as a convolutional filter. The convolution slides the kernel over every pixel of the image and takes the dot product between the image pixels and the kernel [5]. Convolving the input with the filter produces a feature map, which stores a specific feature of the image. Each kernel can be trained to extract a distinct feature, and the kernel values are learned during training by minimising the error function. Figure 2 shows the convolution of matrix I with matrix K to produce I * K.</p>
+<figure><img src="../../assets/gta-self-driving/convolution.png" alt="Convolution of matrix I with kernel K"><figcaption>Figure 2: Convolving matrix I with matrix K</figcaption></figure>
+<p>Adding non-linearity is an important operation in an artificial neural network. Figure 3 shows some common nonlinear activation functions used in CNNs.</p>
+<figure><img src="../../assets/gta-self-driving/activation-functions.png" alt="Common activation functions: sigmoid, tanh, ReLU, leaky ReLU, maxout, ELU"><figcaption>Figure 3: Activation functions [7]</figcaption></figure>
+<p>A pooling layer reduces the number of training parameters and the size of the convolved image, which lowers the computational cost of the model while keeping the most important features extracted during convolution. Like convolution, pooling slides a kernel over each location of the image and stores the corresponding value. The three main types are max pooling, average pooling and sum pooling [4]. Figure 4 shows max pooling reducing a 4×4 feature map to 2×2.</p>
+<figure><img src="../../assets/gta-self-driving/max-pooling.png" alt="Max pooling from a 4 by 4 matrix to a 2 by 2 matrix"><figcaption>Figure 4: Max pooling [4]</figcaption></figure>
+<p>Finally, after all the convolutional operations, the output is flattened into a one-dimensional array, and each element is connected to all the neurons in the next layer. In a deep fully connected network, each neuron in one layer connects to every neuron in the next, as shown in Figure 5. Each connection has its own weight and bias, learned during training through gradient descent [6].</p>
+<figure><img src="../../assets/gta-self-driving/fully-connected.png" alt="A multilayer fully connected network"><figcaption>Figure 5: A multilayer deep fully connected network [6]</figcaption></figure>
+
+<h2>CNN used in this project</h2>
+<p>Most CNNs are built from these convolutional, pooling and fully connected layers, but the number of layers, the number of filters, the activation functions and the depth differ between architectures. NVIDIA's PilotNet, ResNet-50 and VGG-19 were trained on the self-generated dataset and on a dataset published by Sentdex, then tested in different environments: highway and city, each with and without traffic. PilotNet was selected because of its fast prediction rate (frames per second).</p>
+<p>In 2016, NVIDIA published a CNN trained on images from a car's hood camera, paired with the steering angles of a human driver [8]. The training data was collected by driving in various weather and road conditions while recording camera frames and the steering wheel angle. The network's weights and biases were adjusted by minimising the mean squared error through backpropagation. Once trained, the network takes the hood-camera image and outputs the steering angle needed to drive the car.</p>
+<p>PilotNet has 9 layers: 5 convolutional layers, 3 fully connected layers and one normalisation layer. The first three convolutional layers use a 5×5 kernel with a 2×2 stride, and the last two use a 3×3 kernel. The extracted feature maps are passed into a fully connected network that predicts the steering angle. Figure 6 shows the order of the layers.</p>
+<figure><img src="../../assets/gta-self-driving/pilotnet-architecture.png" alt="NVIDIA PilotNet architecture"><figcaption>Figure 6: NVIDIA's PilotNet architecture [8]</figcaption></figure>
+
 <h2>Dataset</h2>
-<ul>
-<li><b>Generation:</b> driving from the first-person hood camera with an Xbox controller for a few hours, recording grayscale 160×120 frames with steering (−1 to 1) and throttle (−1 to 1). The result is 100,000 labelled images.</li>
-<li><b>Balancing:</b> most data lies near steering angle 0 because the car mostly drives straight, which would bias the network. Bins were capped at 4,000 samples, leaving 39,046 images.</li>
-<li><b>Augmentation:</b> flipping each image horizontally and negating its steering angle doubled the set to 78,092 images. Random shifts, brightness and zoom were applied during training.</li>
-</ul>
-<figure><img src="../../assets/gta-self-driving/steering-unbalanced.png" alt="Steering and throttle distribution before balancing"><figcaption>Steering (left) and throttle (right) distribution before balancing.</figcaption></figure>
-<figure><img src="../../assets/gta-self-driving/steering-balanced.png" alt="Steering and throttle distribution after balancing"><figcaption>The same distributions after balancing.</figcaption></figure>
-<h2>Model and training</h2>
-<p>Three networks were compared (PilotNet, ResNet-50 and VGG-19), and PilotNet was chosen for its fast predictions. It has 5 convolutional layers, 3 fully connected layers and a normalisation layer, and a second output neuron was added so it predicts both steering angle and throttle. It is trained as a regression problem with the Adam optimiser on mean squared error, at a learning rate of 0.001, using 62,474 images for training and 15,618 for validation.</p>
-<p>At run time a Python script takes a screenshot of the game, pre-processes it, runs the network and sends the predicted steering and throttle to a virtual Xbox controller (vJoy).</p>
-<h2>Adding object detection (YOLOv3)</h2>
-<p>Behaviour cloning alone drove fairly well but often collided with other vehicles without braking. A pretrained YOLOv3-Tiny, restricted to cars, trucks, people, motorcycles, buses, trains and stop signs, was added. The distance to a detected object is estimated from the size of its bounding box: if it is too close, the throttle is set to −1, the steering to 0 and the brake is applied; if it is nearby, the throttle is reduced a lot; if it is far, a little.</p>
-<p>The first version stopped whenever any vehicle was detected, including cars in other lanes and parked cars. Running the detector only on a central region of interest of the frame fixed this.</p>
-<figure><img src="../../assets/gta-self-driving/yolo-detection.png" alt="YOLO detections with distance labels in GTA-V"><figcaption>YOLOv3-Tiny detections used to slow the car.</figcaption></figure>
-<figure><img src="../../assets/gta-self-driving/roi-highway.png" alt="Region of interest on a highway frame"><figcaption>The region of interest (centre of the frame) on the highway.</figcaption></figure>
-<h2>Results and future work</h2>
-<p>The integrated system showed that a self-driving car can be built and simulated with computer vision and deep learning, though more research is needed before it would be realistic for an actual car.</p>
-<ul>
-<li>Higher-resolution images and a more diverse dataset (most data came from highway driving).</li>
-<li>CNN plus LSTM, so predictions depend on previous outputs and the car can tell a parked vehicle from a moving one.</li>
-</ul>
+<h3>1. Generating the data</h3>
+<p>A real car is steered by turning the steering wheel by some angle. In GTA-V the same can be done with an Xbox controller, which controls both steering and throttle like a real car. The steering angle ranges from −1 (fully left) to 1 (fully right), and the throttle from −1 (no acceleration) to 1 (full acceleration).</p>
+<p>Training on such a dataset gives a more realistic self-driving car. The trained network outputs continuous values for steering and throttle, which are passed to a virtual joystick that turns and accelerates the car by that amount.</p>
+<p>The custom dataset was generated by driving from a first-person view, so the network is trained on what the vehicle actually sees. This is done by turning on GTA-V's hood camera, as shown in Figure 7. Because of the limited RAM and storage on Google Colab, frames were recorded as 160×120 grayscale images [160 × 120 × 1], each with its steering angle and throttle. After a few hours of driving, the dataset held 100,000 labelled images. It was uploaded to Google Drive, which was mounted in Google Colab for preprocessing and training.</p>
+<figure><img src="../../assets/gta-self-driving/hood-camera.png" alt="Hood camera view in GTA-V on a highway"><figcaption>Figure 7: The car's hood camera used to collect the data</figcaption></figure>
+
+<h3>2. Balancing the dataset</h3>
+<p>Figure 8 shows the distribution of steering angle and throttle in the collected data. Because the car drives straight most of the time, most samples sit near a steering angle of 0. A network trained on this data would be biased toward always driving straight and would perform poorly.</p>
+<figure><img src="../../assets/gta-self-driving/steering-unbalanced.png" alt="Steering and throttle histograms before balancing"><figcaption>Figure 8: Steering angle (left) and throttle (right) distribution of the unbalanced dataset</figcaption></figure>
+<p>To balance the dataset, samples above a threshold in each bin (an image with its steering and throttle) were removed at random. Here the threshold is 4,000. Figure 9 shows the distributions after balancing.</p>
+<figure><img src="../../assets/gta-self-driving/steering-balanced.png" alt="Steering and throttle histograms after balancing"><figcaption>Figure 9: Steering angle (left) and throttle (right) distribution after balancing the dataset</figcaption></figure>
+<p>After balancing, 39,046 images remain (60,954 were removed).</p>
+
+<h3>3. Artificially expanding the dataset</h3>
+<p>39,046 images might not be enough to train the CNN, so the balanced dataset was expanded with image augmentation. Each image was flipped horizontally and its steering angle multiplied by −1. Adding these flipped images doubled the dataset to 78,092 images. Figure 10 shows the distribution of the expanded dataset, and Figure 11 shows an original image and its flipped copy with their steering angles.</p>
+<figure><img src="../../assets/gta-self-driving/steering-expanded.png" alt="Steering and throttle histograms after expansion"><figcaption>Figure 10: Steering angle (left) and throttle (right) distribution of the artificially expanded dataset</figcaption></figure>
+<figure><img src="../../assets/gta-self-driving/flipped-image.png" alt="Original and horizontally flipped frame"><figcaption>Figure 11: Original and flipped image with their respective steering angles</figcaption></figure>
+<p>Other augmentations, such as random shifts, brightness and zoom, were applied during training to add variation. This reduces overfitting and improves the model's ability to generalise.</p>
+
+<h2>Training and testing PilotNet to predict steering and throttle</h2>
+<p>Training a CNN is time-consuming and needs a lot of experimentation with parameters to get the best results. Networks can be trained for classification, detection or regression. A validation set is used to measure the network's performance without bias.</p>
+<p>The goal is to minimise the loss function, that is, to find its global minimum. Figure 12 illustrates this in 2D. Starting at a random point, compute the slope there. If the slope is positive, move the point left by one step (the learning rate); if it is negative, move it right. Repeating this over many iterations eventually brings the point to a minimum of the function, though it can get stuck in a local minimum instead of the global one.</p>
+<figure><img src="../../assets/gta-self-driving/gradient-descent-2d.png" alt="A 2D function with local and global minima and maxima"><figcaption>Figure 12: Gradient descent illustrated on a 2D function [9]</figcaption></figure>
+<p>For a complex neural network, the loss can be pictured as a surface in 3D, as in Figure 13. Starting at a random point, the gradient gives the direction of steepest ascent, so multiplying it by −1 gives the direction of steepest descent. Taking a step in that direction and repeating over many iterations converges to a minimum. This process is gradient descent: at each iteration the network computes the error and adjusts its weights and biases to reduce it efficiently.</p>
+<figure><img src="../../assets/gta-self-driving/gradient-descent-3d.png" alt="A 3D loss surface with local and global minima and a saddle point"><figcaption>Figure 13: Gradient descent illustrated on a 3D function [10]</figcaption></figure>
+<p>The point can still get stuck in a local minimum. This can be addressed by tuning the learning rate or by decaying it [10], so the network takes larger steps at first and smaller ones later, which lowers the chance of getting stuck. The Adam optimiser (adaptive moment estimation) is an adaptive method that computes an individual learning rate for each parameter [11].</p>
+<p>Here, the images and their steering angles and throttle values are fitted as a regression problem, since the outputs are continuous numbers. The original PilotNet architecture predicts the steering angle by regression [8]; one more output neuron was added to predict throttle as well. Adam backpropagates the mean squared error, with a learning rate of 0.001 chosen through experimentation. Of the 78,092 images, 62,474 are used for training and 15,618 for validation. The training images are augmented to help the network generalise, as also suggested in [8].</p>
+<figure><img src="../../assets/gta-self-driving/augmentation.png" alt="An original frame and a randomly augmented frame"><figcaption>Figure 14: Random image augmentation used during training to help the CNN generalise</figcaption></figure>
+<p>The trained network is tested by running a Python script that captures a frame from the game screen, preprocesses it and passes it to the CNN. The CNN predicts the steering angle and throttle, which are sent to a virtual Xbox controller (vJoy) to drive the vehicle. These steps repeat continuously to drive the vehicle in the game.</p>
+<!-- GIF: upload as assets/gta-self-driving/bc-only-driving.gif, then replace this div with:
+<figure><img src="../../assets/gta-self-driving/bc-only-driving.gif" alt="The car driving with PilotNet only"><figcaption>PilotNet alone, without object detection.</figcaption></figure> -->
+<div class="placeholder">GIF: PilotNet driving on its own (bc-only-driving.gif)</div>
+<p>Although this network drives reasonably well with behaviour cloning alone, it still makes mistakes, such as frequently colliding with other vehicles without braking.</p>
+
+<h2>Object detection and localisation (YOLOv3)</h2>
+<p>Adding an object detection algorithm can significantly improve the self-driving vehicle's performance. Knowing the exact position of vehicles and pedestrians ahead lets the AI make decisions accordingly. Object detection can also recognise traffic signs, an integral part of a fully autonomous vehicle. You Only Look Once (YOLO) is one of the most popular state-of-the-art real-time object detection systems [12]. Since YOLO was first introduced in 2015, newer versions have made predictions faster and more accurate. This project considers YOLOv3 and YOLOv3-Tiny for fast real-time prediction, integrated with the selected network (PilotNet).</p>
+<p>YOLOv3 uses the same idea as the original YOLO: it unifies object detection into a single neural network by dividing the input image into a grid [14]. Each grid cell predicts bounding boxes, and each bounding box predicts 4 coordinates, t<sub>x</sub>, t<sub>y</sub>, t<sub>w</sub> and t<sub>h</sub> [13], where t<sub>x</sub> and t<sub>y</sub> relate to the centre x and y, and t<sub>w</sub> and t<sub>h</sub> to the width and height of the box. The centre, width and height of the bounding box relative to the grid are calculated as follows [13]:</p>
+<p class="eq">b<sub>x</sub> = σ(t<sub>x</sub>) + c<sub>x</sub><br>b<sub>y</sub> = σ(t<sub>y</sub>) + c<sub>y</sub><br>b<sub>w</sub> = p<sub>w</sub> e<sup>t<sub>w</sub></sup><br>b<sub>h</sub> = p<sub>h</sub> e<sup>t<sub>h</sub></sup></p>
+<p>where c<sub>x</sub>, c<sub>y</sub> is the location of the grid cell; b<sub>x</sub>, b<sub>y</sub> is the location of the bounding box; p<sub>w</sub>, p<sub>h</sub> is the anchor box prior obtained from clustering; and b<sub>w</sub>, b<sub>h</sub> are the dimensions of the bounding box.</p>
+<figure><img src="../../assets/gta-self-driving/yolo-bounding-box.png" alt="Bounding box prediction relative to the grid and anchor prior"><figcaption>Figure 15: Bounding box in YOLOv3 [13]</figcaption></figure>
+<p>Each bounding box also predicts a label and a confidence score for the object inside it. The output tensor has a fixed size of S × S × (B × 5 + C), where S is the grid size, B is the number of bounding boxes per cell and C is the number of labelled classes [14]. The label with the highest score is the output of each box. Boxes whose confidence falls below a user-defined threshold are discarded.</p>
+<figure><img src="../../assets/gta-self-driving/yolo-grid.png" alt="YOLO dividing an image into a grid, predicting boxes and class probabilities, and producing final detections"><figcaption>Figure 16: YOLO detecting objects</figcaption></figure>
+<p>When an image is passed into the trained network, it returns a fixed number of bounding boxes, each with a confidence score for its label. In Figure 16, the bold boxes around the dog, bicycle and truck show the network is confident in those labels, which are above the threshold. The other boxes have low confidence and are discarded, so the dog, bicycle and truck are detected.</p>
+<p>YOLOv3 uses binary cross-entropy loss for multi-label classification, which gives the probability that a detected object belongs to each label. This project uses YOLOv3 pretrained on the COCO dataset. From the equations above, the output tensor has a size of</p>
+<p class="eq">S × S × [3 × (4 + 1) + 80]</p>
+<p>where 3 is the number of bounding boxes per cell, 4 is the coordinates predicted by each box (t<sub>x</sub>, t<sub>y</sub>, t<sub>w</sub>, t<sub>h</sub>), 1 is the confidence prediction, and 80 is the number of classes in the COCO dataset [13].</p>
+<p>YOLOv3 uses Darknet-53, with 53 convolutional layers, as its feature extractor. Feature extraction works as described in the convolutional neural network section above.</p>
+<figure><img src="../../assets/gta-self-driving/darknet53.png" alt="Darknet-53 layer table"><figcaption>Figure 17: Darknet-53 architecture [13]</figcaption></figure>
+
+<h2>Integrating PilotNet with YOLOv3</h2>
+<p>YOLOv3 and YOLOv3-Tiny, pretrained on COCO, are used to detect objects in real time. COCO has 80 classes, but for this application only cars, trucks, people, motorcycles, buses, trains and stop signs are considered; other classes such as zebras, apples or oranges are ignored. YOLOv3-Tiny is used because it predicts faster than YOLOv3.</p>
+<p>The car also needs to know how far away a detected object is, to slow down or brake accordingly. This is estimated from the diagonal length of the detected object's bounding box, using its width t<sub>w</sub> and height t<sub>h</sub>:</p>
+<p class="eq">diagonal length = √(t<sub>w</sub><sup>2</sup> + t<sub>h</sub><sup>2</sup>)</p>
+<p>An object far from the car has a short diagonal, and an object close to the car has a long one, as shown in Figure 18. The thresholds for deciding whether an object is too close, close or far were found experimentally.</p>
+<figure><img src="../../assets/gta-self-driving/yolo-detection.png" alt="YOLOv3-Tiny detections labelled by distance"><figcaption>Figure 18: YOLOv3-Tiny used to estimate the relative distance of detected objects</figcaption></figure>
+<p>PilotNet and YOLOv3-Tiny are combined in a single script that controls steering and throttle. If a detected object is too close, the throttle is set to −1 (no acceleration), the steering to 0 (no steering) and the brake is applied. If the object is nearby but not too close, the throttle is reduced significantly to slow the car. If it is far, the throttle is reduced slightly.</p>
+<p>Testing the integrated system in different scenarios showed that the car tended to stop whenever it detected a vehicle in another lane, an oncoming vehicle, or a parked vehicle close by. Figure 19 shows one case, where the car stopped in the middle of the highway because it detected a car in the next lane.</p>
+<figure><img src="../../assets/gta-self-driving/stopped-on-highway.png" alt="The car stopped on the highway because of a car in the next lane"><figcaption>Figure 19: The YOLO-integrated AI stopped in the middle of the highway because of a vehicle in the side lane</figcaption></figure>
+<p>To fix this, a region of interest is applied to the frame passed into YOLOv3-Tiny. The car should stop only when a vehicle or person is very close in front of it. As Figures 20 and 21 show, detection runs only on the centre of the screen, so pedestrians and vehicles in other lanes are not detected, which improves performance.</p>
+<figure><img src="../../assets/gta-self-driving/roi-highway.png" alt="Region of interest in the centre of a highway frame"><figcaption>Figure 20: Region of interest for YOLOv3-Tiny (highway)</figcaption></figure>
+<figure><img src="../../assets/gta-self-driving/roi-city.png" alt="Region of interest in the centre of a city frame"><figcaption>Figure 21: Region of interest for YOLOv3-Tiny (city)</figcaption></figure>
+
+<h2>Results: PilotNet + YOLOv3</h2>
+<!-- GIF: upload as assets/gta-self-driving/pilotnet-yolo-driving.gif, then replace this div with:
+<figure><img src="../../assets/gta-self-driving/pilotnet-yolo-driving.gif" alt="The car driving with PilotNet and YOLOv3-Tiny"><figcaption>PilotNet with YOLOv3-Tiny object detection.</figcaption></figure> -->
+<div class="placeholder">GIF: PilotNet + YOLOv3-Tiny driving (pilotnet-yolo-driving.gif)</div>
+<p>Comparing the results of the integrated system across different scenarios shows that a self-driving car can be built and simulated with computer vision and deep learning, the approach Tesla mainly uses for its Autopilot system.</p>
+<p>Although the car's overall performance was good, more research is needed to make it realistic enough to implement on an actual car.</p>
+
+<h2>Further improvements</h2>
+<h3>1. Higher-resolution images and a more diverse dataset</h3>
+<p>Because of limited resources and memory, the data was collected at low resolution, so some important features may not be extracted by the convolutional layers. Also, because of time constraints, most of the data came from highway driving. Collecting a better, larger and more diverse dataset would help the network generalise to different inputs.</p>
+<h3>2. CNN + LSTM (recurrent neural network)</h3>
+<p>Currently PilotNet outputs a steering angle and throttle for each frame independently of its previous outputs. A human driver, by contrast, knows the car's previous state: when making a left turn, they know how far the wheel is already turned and adjust accordingly. Because each prediction is independent, the control looks unsynchronised. Similarly, YOLOv3-Tiny does not know the state of a detected object: whether a vehicle is parked or in the oncoming lane, or whether a person is walking or standing.</p>
+<p>Adding a Long Short-Term Memory (LSTM) block, a type of recurrent neural network, to the CNN can solve this. The memory block holds previous predictions, and the next action depends on both the current input and the previous output. Since driving depends on time series and selective memory, an LSTM is a suitable approach for a self-driving car.</p>
+
 <h2>Code</h2>
 <p class="links"><a href="https://github.com/Alzaib/Autonomous-Self-Driving-Car-GTA-5" rel="noopener noreferrer">GitHub: Autonomous-Self-Driving-Car-GTA-5</a></p>
+
+<h2>References</h2>
+<ol class="refs">
+<li>H. Kinsley, "Python Plays GTA V," Python Programming Tutorials. <a href="https://pythonprogramming.net/next-steps-python-plays-gta-v/" rel="noopener noreferrer">pythonprogramming.net</a></li>
+<li>Google Research, "Colaboratory." <a href="https://research.google.com/colaboratory/faq.html" rel="noopener noreferrer">research.google.com</a></li>
+<li>Keras Team, "About Keras." <a href="https://keras.io/about/" rel="noopener noreferrer">keras.io</a></li>
+<li>Prabhu, "Understanding of Convolutional Neural Network (CNN): Deep Learning," Medium, 2019.</li>
+<li>K. Patel, "MNIST Handwritten Digits Classification using a Convolutional Neural Network (CNN)," Towards Data Science, 2019. <a href="https://towardsdatascience.com/mnist-handwritten-digits-classification-using-a-convolutional-neural-network-cnn-af5fafbc35e9" rel="noopener noreferrer">towardsdatascience.com</a></li>
+<li>B. Ramsundar and R. B. Zadeh, "TensorFlow for Deep Learning," O'Reilly. <a href="https://www.oreilly.com/library/view/tensorflow-for-deep/9781491980446/ch04.html" rel="noopener noreferrer">oreilly.com</a></li>
+<li>Activation functions figure, miro.medium.com, 2020.</li>
+<li>M. Bojarski et al., "End to End Learning for Self-Driving Cars," arXiv:1604.07316, 2016. <a href="https://arxiv.org/abs/1604.07316" rel="noopener noreferrer">arxiv.org</a></li>
+<li>"Maxima and minima," Wikipedia. <a href="https://en.wikipedia.org/wiki/File:Extrema_example_original.svg" rel="noopener noreferrer">wikipedia.org</a></li>
+<li>A. Kathuria, "Intro to optimization in deep learning: Gradient Descent," Paperspace Blog, 2019. <a href="https://blog.paperspace.com/intro-to-optimization-in-deep-learning-gradient-descent/" rel="noopener noreferrer">paperspace.com</a></li>
+<li>V. Bushaev, "Adam: latest trends in deep learning optimization," Towards Data Science, 2018. <a href="https://towardsdatascience.com/adam-latest-trends-in-deep-learning-optimization-6be9a291375c" rel="noopener noreferrer">towardsdatascience.com</a></li>
+<li>J. Redmon and A. Farhadi, "YOLO: Real-Time Object Detection." <a href="https://pjreddie.com/darknet/yolo/" rel="noopener noreferrer">pjreddie.com</a></li>
+<li>J. Redmon and A. Farhadi, "YOLOv3: An Incremental Improvement," arXiv:1804.02767, 2018. <a href="https://arxiv.org/abs/1804.02767" rel="noopener noreferrer">arxiv.org</a></li>
+<li>J. Redmon, S. Divvala, R. Girshick and A. Farhadi, "You Only Look Once: Unified, Real-Time Object Detection," CVPR 2016. <a href="https://ieeexplore.ieee.org/document/7780460" rel="noopener noreferrer">ieeexplore.ieee.org</a></li>
+</ol>
+
 <nav class="pager"><a href="../../index.html#projects">&larr; All projects</a></nav>
 </main>
 <footer><div class="wrap">&copy; Alzaib Karovalia. Static site: no cookies, no analytics, no third-party scripts.</div></footer>
