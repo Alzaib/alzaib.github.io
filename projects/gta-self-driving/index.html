@@ -71,9 +71,7 @@
 <p>Here, the images and their steering angles and throttle values are fitted as a regression problem, since the outputs are continuous numbers. The original PilotNet architecture predicts the steering angle by regression [8]; one more output neuron was added to predict throttle as well. Adam backpropagates the mean squared error, with a learning rate of 0.001 chosen through experimentation. Of the 78,092 images, 62,474 are used for training and 15,618 for validation. The training images are augmented to help the network generalise, as also suggested in [8].</p>
 <figure><img src="../../assets/gta-self-driving/augmentation.png" alt="An original frame and a randomly augmented frame"><figcaption>Figure 14: Random image augmentation used during training to help the CNN generalise</figcaption></figure>
 <p>The trained network is tested by running a Python script that captures a frame from the game screen, preprocesses it and passes it to the CNN. The CNN predicts the steering angle and throttle, which are sent to a virtual Xbox controller (vJoy) to drive the vehicle. These steps repeat continuously to drive the vehicle in the game.</p>
-<!-- GIF: upload as assets/gta-self-driving/bc-only-driving.gif, then replace this div with:
-<figure><img src="../../assets/gta-self-driving/bc-only-driving.gif" alt="The car driving with PilotNet only"><figcaption>PilotNet alone, without object detection.</figcaption></figure> -->
-<div class="placeholder">GIF: PilotNet driving on its own (bc-only-driving.gif)</div>
+
 <p>Although this network drives reasonably well with behaviour cloning alone, it still makes mistakes, such as frequently colliding with other vehicles without braking.</p>
 
 <h2>Object detection and localisation (YOLOv3)</h2>
