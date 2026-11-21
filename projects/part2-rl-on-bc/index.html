@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Teaching a Frozen VLA to Fail Less (Part 2) | Alzaib Karovalia</title>
+<link rel="stylesheet" href="../../style.css"></head>
+<body>
+<header class="site"><div class="wrap"><a class="brand" href="../../index.html">Alzaib Karovalia</a>
+<nav><a href="../../index.html">Home</a><a href="../../index.html#projects">Projects</a></nav></div></header>
+<main class="wrap">
+<p class="meta"><a href="../../index.html#projects">&larr; All projects</a></p>
+<h1>Teaching a Frozen VLA to Fail Less: RL on Top of Behaviour Cloning (Part 2)</h1>
+<p class="meta">November 2026</p>
+
+<h2>Summary</h2>
+<p>A 5,966-parameter residual policy trained with reinforcement learning improves the behaviour-cloning (BC) VLA from ~50.7% to ~76.3% success on 600 held-out pick-and-place episodes, without fine-tuning the BC weights.</p>
+<p>In Part 1 a 0.65M-parameter action-chunking transformer was trained on scripted-expert demonstrations in MuJoCo. It reached about 51% success and plateaued there, because small errors in where it puts the gripper decide whether a grasp works. In Part 2 that model was left completely frozen and a tiny actor was trained on top of it. The actor reads the waypoint BC proposes and adds a small, bounded joint correction (at most 0.03 rad). It learns from a simple reward: 0.5 for lifting the box, plus 1 for placing it in the zone.</p>
+<p>The actor was trained two ways, each with 8,000 episodes: an actor-critic method and a GRPO-style method. Both reach about 75% success on the held-out test sets.</p>
+
+<div class="placeholder">Hero GIF goes here: BC / BC + actor-critic / BC + GRPO on one scene.</div>
+
+<h2>1. Why a residual on top</h2>
+<p>BC knows the task but is imprecise. The expert never fails and never recovers from a mistake, so the dataset contains no examples of correcting a bad grasp or an incorrect drop. Fine-tuning all 652,296 weights with RL would be slow and unstable, and could damage the language and vision behaviour that already works. A tiny actor that only nudges BC's output, capped at 0.03 rad per joint, can fix these errors.</p>
+<p>Hardware: a laptop with a GTX 1650 Ti (4 GB). Simulation runs on the CPU and dominates the compute.</p>
+
+<h2>2. Setup</h2>
+<ul>
+<li><b>Scene:</b> a Franka Panda on a grey table, three boxes (red, blue, white) and two drop zones (green, pink), giving 6 instructions such as "put the red box in the green zone".</li>
+<li><b>Episode:</b> 7 steps: above the box, grasp, lift, carry, release, rise, home.</li>
+<li><b>Success:</b> the target box ends within 4 cm of the zone centre and below z = 0.03 m.</li>
+<li><b>Reward:</b> 0 if the box is never lifted, 0.5 if it is lifted but not placed, 1.5 if it is lifted and placed. The small lift bonus separates a missed grasp from a good grasp followed by a bad placement.</li>
+</ul>
+
+<h2>3. Architecture</h2>
+<p>The actor reads only BC's output waypoint (plus step, target box, target zone and finger opening), so it never sees BC's internals. Its output is a mean correction, 0.03 rad times tanh of a small network, with a learned Gaussian standard deviation for exploration.</p>
+<img src="../../assets/part2/architecture_bc_rl.png" alt="Architecture: frozen BC policy proposes a waypoint, the residual actor adds a bounded correction, the simulator returns a reward, and the learning rule updates only the actor." width="1100">
+<p class="meta">Only the top row runs at test time. The training path changes the 5,966 actor weights; BC's 652,296 weights never change.</p>
+
+<h2>4. Two learning rules</h2>
+<ul>
+<li><b>Actor-critic:</b> 16 episodes per iteration. A small critic predicts the expected return for each situation, and the actor is pushed toward corrections that did better than that expectation.</li>
+<li><b>GRPO-style:</b> groups of 8 episodes on the same scene and instruction. Each episode's advantage is its reward minus the group mean, divided by the group standard deviation. No critic is needed.</li>
+</ul>
+<p>Both use the same actor, reward and budget: 500 iterations, 8,000 episodes, about 70 to 75 minutes on the laptop CPU, with a 1e-3 learning rate for the actor.</p>
+
+<h2>5. Results</h2>
+<p>Test sets are 300 fixed layouts per seed (50 per instruction), on two seeds, with BC run through the same code as a control.</p>
+<table>
+<tr><th>Policy</th><th class="num">Seed 123</th><th class="num">Seed 456</th><th class="num">Pooled (600)</th></tr>
+<tr><td>BC alone</td><td class="num">150/300 (50.0%)</td><td class="num">154/300 (51.3%)</td><td class="num">50.7%</td></tr>
+<tr><td>BC + actor-critic</td><td class="num">227/300 (75.7%)</td><td class="num">231/300 (77.0%)</td><td class="num">76.3%</td></tr>
+<tr><td>BC + GRPO</td><td class="num">220/300 (73.3%)</td><td class="num">232/300 (77.3%)</td><td class="num">75.3%</td></tr>
+</table>
+<p>At 60 validation episodes the standard error is about 6.5 points, so the two methods are read as a tie.</p>
+<div class="placeholder">Training-versus-validation plots and per-instruction bar charts go here.</div>
+
+<h2>6. What I learned</h2>
+<ul>
+<li>A correction of at most 0.03 rad moved success by about 25 points, which suggests BC's errors are small and systematic rather than conceptual.</li>
+<li>GRPO needs variation to learn: early on the eight attempts in a group are almost identical, so the advantage signal is weak. It took off once exploration produced real differences.</li>
+<li>The learned standard deviation barely moved (0.01 to 0.0098), so the gain came from shifting the mean correction, not from more exploration.</li>
+<li>Small validation sets mislead: validation started at 62% while the 300-episode test sets put BC at 50.7%. The headline numbers rest on the test sets.</li>
+</ul>
+
+<h2>7. Limitations</h2>
+<ul>
+<li>One training seed per method; the GRPO versus actor-critic gap is within noise.</li>
+<li>Toy task: one scene, one camera, three boxes, two zones. The gripper command is still BC's.</li>
+<li>Black-box only: the actor cannot fix errors that need visual information BC discarded.</li>
+<li>Simulation only.</li>
+</ul>
+
+<h2>Code</h2>
+<p>[Link to the GitHub repository goes here.]</p>
+
+<h2>Reference</h2>
+<p>H. Li et al. <a href="https://arxiv.org/abs/2509.09674" rel="noopener noreferrer">SimpleVLA-RL: Scaling VLA Training via Reinforcement Learning</a>. arXiv:2509.09674, 2025.</p>
+<nav class="pager"><a href="../part1-behaviour-cloning/index.html">&larr; Part 1: Behaviour cloning</a></nav>
+</main>
+<footer><div class="wrap">&copy; Alzaib Karovalia. Static site: no cookies, no analytics, no third-party scripts.</div></footer>
+</body></html>

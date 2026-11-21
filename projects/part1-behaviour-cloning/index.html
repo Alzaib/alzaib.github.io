@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Part 1: Behaviour cloning a small VLA in MuJoCo | Alzaib Karovalia</title>
+<link rel="stylesheet" href="../../style.css"></head>
+<body>
+<header class="site"><div class="wrap"><a class="brand" href="../../index.html">Alzaib Karovalia</a>
+<nav><a href="../../index.html">Home</a><a href="../../index.html#projects">Projects</a></nav></div></header>
+<main class="wrap">
+<p class="meta"><a href="../../index.html#projects">&larr; All projects</a></p>
+<h1>Language-Vision Pick-and-Place in MuJoCo: Behaviour Cloning a Small VLA (Part 1)</h1>
+<p class="meta">November 2026 &middot; <a href="../part2-rl-on-bc/index.html">Continue to Part 2 &rarr;</a></p>
+<h2>Summary</h2>
+<p>A small vision-language-action (VLA) policy controls a simulated Franka Panda arm in MuJoCo from a camera image and a text instruction such as "put the red box in the green zone". It was trained by behaviour cloning (BC) on 2,000 scripted-expert episodes and reaches 51% success (153/300 simulator rollouts) in its best scene.</p>
+<p>The same 0.65M-parameter model went from near-zero to 51% success without any architecture change, mostly by making the scene easier to see: a white box on a beige table was almost invisible (about 0% instruction following), while a white box on a grey table worked. Scene visibility mattered more than model tweaks. This 51% policy is the frozen baseline for <a href="../part2-rl-on-bc/index.html">Part 2</a>, where reinforcement learning improves it.</p>
+<figure><img src="../../assets/part1-behaviour-cloning/scene3.png" alt="MuJoCo scene with a Franka Panda, grey table, three boxes and two drop zones"><figcaption>Scene 3: grey table, red / blue / white boxes, green and pink drop zones.</figcaption></figure>
+<h2>1. Project overview and goal</h2>
+<p>The goal is to build a very small VLA on a simulated robot with controllable joints and a gripper, and to understand every piece of it well enough to explain it. A VLA maps an image and a language instruction to robot actions. Part 1 is behaviour cloning: a scripted expert collects demonstrations and a transformer policy imitates them. Part 2 adds a small residual RL policy on top of the frozen BC model.</p>
+<p><b>Hardware.</b> A laptop with a GTX 1650 Ti (4 GB) on Windows in a Python 3.10 venv, used for data collection and simulator evaluation. Training ran on a free Google Colab T4.</p>
+<h2>2. Model setup (simulation)</h2>
+<ul>
+<li><b>Robot:</b> Franka Panda (from MuJoCo Menagerie), 7 arm joints under position control plus a gripper.</li>
+<li><b>Objects:</b> a table, three coloured boxes and two drop zones. Every episode samples new positions (x 0.30–0.70 m, y −0.30–0.30 m) with keep-out radii so objects never overlap.</li>
+<li><b>Camera:</b> one front "agentview" camera rendered at 128×128.</li>
+<li><b>Instruction:</b> "put the {box} box in the {zone} zone", giving 6 instructions (3 boxes × 2 zones).</li>
+<li><b>Success:</b> the target box centre ends within 4 cm of the zone centre and below z = 0.03 m.</li>
+</ul>
+<h2>3. Data collection</h2>
+<p>Demonstrations come from a scripted expert that uses damped-least-squares inverse kinematics (IK) to reach Cartesian targets. The expert succeeds on 100% of episodes. IK is used only by the expert: at test time the policy outputs joint targets directly.</p>
+<p>Each episode has 7 steps: above the box, grasp, lift, carry, release, rise, home. Each step records the camera image, the instruction, the step number, the finger opening and the next 4 absolute joint targets (a 4-step action chunk). The dataset has 2,000 training and 200 validation episodes, giving 14,000 training samples.</p>
+<figure><img src="../../assets/part1-behaviour-cloning/expert-trajectory.png" alt="Seven expert steps from a front camera"><figcaption>The expert completing the task, steps 0 to 6, seen from the front camera.</figcaption></figure>
+<h2>4. Model architecture</h2>
+<p>The policy is a small non-autoregressive action-chunking transformer with 652,296 parameters. It reads 74 input tokens (64 image, 8 word, 1 step, 1 finger) and predicts a 4-step action chunk in one forward pass. A CNN of four stride-2 convolutions with GroupNorm turns the image into an 8×8 grid of tokens. Four learned query tokens go through a 3-layer encoder, and two linear heads output joint targets and a gripper logit. Only the first waypoint is executed before the policy re-observes (closed loop).</p>
+<p>The loss is masked MSE on normalised joint targets plus binary cross-entropy on the gripper. GroupNorm mattered: without it the first runs stayed on a no-image plateau.</p>
+<figure><img src="../../assets/part1-behaviour-cloning/architecture.png" alt="Action-chunking transformer architecture diagram"><figcaption>Policy architecture (652,296 parameters).</figcaption></figure>
+<h2>5. Training setup</h2>
+<ul>
+<li><b>Optimizer:</b> AdamW, learning rate 1e-3, batch size 64, 100 epochs.</li>
+<li><b>Targets:</b> absolute joint angles normalised by the training mean and standard deviation. The best-validation-loss checkpoint is kept.</li>
+<li><b>Evaluation:</b> each of the 6 instructions is run 50 times on new random layouts from a fixed seed (123), so every model is tested on the same episodes. Success uses the 4 cm rule above.</li>
+</ul>
+<figure><img src="../../assets/part1-behaviour-cloning/loss-scene3.png" alt="Training and validation loss curves for Scene 3"><figcaption>Scene 3 training and validation loss. Both fall to about 0.01, with no sign of overfitting.</figcaption></figure>
+<h2>6. Experiments</h2>
+<p>The model and training recipe stayed fixed; only the scene changed. Each scene needed a fresh dataset and a fresh training run.</p>
+<table>
+<tr><th>Scene</th><th class="num">Best val loss</th><th class="num">Simulator success</th></tr>
+<tr><td>1: beige table, red / blue / yellow boxes</td><td class="num">0.0738</td><td class="num">12.3% (37/300)</td></tr>
+<tr><td>2: beige table, red / blue / white boxes</td><td class="num">0.4374</td><td class="num">0.0% (0/300)</td></tr>
+<tr><td>3: grey table, red / blue / white boxes</td><td class="num">about 0.0099</td><td class="num">51% (153/300)</td></tr>
+</table>
+<p>Swapping yellow for white was meant to make the colours more distinct, but white blended with the cream table and the white robot. Changing only the table colour to grey fixed it.</p>
+<figure><img src="../../assets/part1-behaviour-cloning/results-scene3.png" alt="Scene 3 success per instruction, final distance histogram and start-position scatter"><figcaption>Scene 3: success per instruction (left), final box-to-zone distance with the 4 cm threshold (middle), and start position of the target box (right).</figcaption></figure>
+<h2>7. Results</h2>
+<p>Scene 3 success by instruction (50 rollouts each):</p>
+<ul>
+<li>Red box: green zone 28/50, pink zone 30/50</li>
+<li>Blue box: green zone 28/50, pink zone 26/50</li>
+<li>White box: green zone 21/50, pink zone 20/50</li>
+</ul>
+<p>White is the weakest box (about 41%, against 58% for red and 54% for blue).</p>
+<h2>8. Analysis and lessons learned</h2>
+<ul>
+<li><b>Visibility dominated.</b> What the camera could see mattered more than the architecture. A grey table fixed the white box without any model change.</li>
+<li><b>Loss plateaus then sudden drops.</b> Training sat flat, then fell sharply, and whether and when it escaped varied by run.</li>
+<li><b>Rollouts beat guessing.</b> Success per instruction and per start position showed where the policy fails.</li>
+</ul>
+<p><b>Failure analysis of the 51% baseline (147 failures).</b> About 20 of 147 ended within 8 cm of the zone, so they were near misses. Failures concentrate at the top-left of the table (x about 0.3–0.45 m, y above 0.15 m). Whether failures are bad grasps or bad placement was not yet measured.</p>
+<figure><img src="../../assets/part1-behaviour-cloning/success-heatmap.png" alt="Success rate heatmap by start position of the target box"><figcaption>Success by start position in a 4×4 grid: lowest at the top-left (6%), highest at the bottom-right (71–75%).</figcaption></figure>
+<h2>9. Limitations</h2>
+<ul>
+<li>Very simple VLA: 0.65M parameters, a 10-word vocabulary and a 6-instruction template, with no pretrained vision or language model.</li>
+<li>Simple task: one pick-and-place with a fixed camera and scene style.</li>
+<li>Limited data: 2,000 expert episodes that always succeed and never recover from mistakes.</li>
+<li>Scene-specific: each scene needed new data and training; the model does not generalise across colours or tables.</li>
+</ul>
+<h2>10. Next steps</h2>
+<p>The 51% policy becomes the frozen baseline for RL. <a href="../part2-rl-on-bc/index.html">Part 2</a> trains a small residual policy on top of it with actor-critic and GRPO-style learning.</p>
+<h2>Code</h2>
+<p class="links">[Link to the GitHub repository goes here.]</p>
+<p class="meta">Files: <code>env.py</code>, <code>expert.py</code>, <code>ik.py</code>, <code>collect.py</code> (data); <code>bc_model.py</code> (model, shared by Colab and laptop); <code>eval_bc.py</code> (simulator and offline evaluation); <code>replay.py</code> and <code>view_data.py</code> (inspect packed <code>.npz</code> data).</p>
+<nav class="pager"><a href="../../index.html#projects">&larr; All projects</a></nav>
+</main>
+<footer><div class="wrap">&copy; Alzaib Karovalia. Static site: no cookies, no analytics, no third-party scripts.</div></footer>
+</body></html>

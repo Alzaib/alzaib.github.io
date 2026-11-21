@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Autonomous Driving Platform (capstone) | Alzaib Karovalia</title>
+<link rel="stylesheet" href="../../style.css"></head>
+<body>
+<header class="site"><div class="wrap"><a class="brand" href="../../index.html">Alzaib Karovalia</a>
+<nav><a href="../../index.html">Home</a><a href="../../index.html#projects">Projects</a></nav></div></header>
+<main class="wrap">
+<p class="meta"><a href="../../index.html#projects">&larr; All projects</a></p>
+<h1>Autonomous Driving Platform: a self-driving vehicle prototype (capstone)</h1>
+<p class="meta">Team capstone project, January to August 2021</p>
+<h2>Summary</h2>
+<p>A self-driving vehicle prototype built as a team capstone for the Mechatronic Systems Engineering programme at Simon Fraser University. It uses computer vision and deep neural networks to steer and drive a vehicle, with a remote control that can override the AI at any time.</p>
+<div class="placeholder">[Add a photo or the demo video of the car here.]</div>
+<h2>Overview</h2>
+<p>The project has four parts:</p>
+<ol>
+<li><b>Car hacking.</b> The steering, throttle and brake potentiometers are replaced with MCP4725 digital-to-analogue converters driven by an Arduino Uno. A radio receiver passes the driver's transmitter signals to the Arduino, which maps them to voltages, so the car can be driven by hand or by the computer.</li>
+<li><b>Data collection.</b> Over 70,000 driving frames were recorded by a laptop script that pairs camera images with steering and throttle values read over serial. About 1,100 images were hand-labelled in YOLO format for pedestrians, vehicles, stop signs and 30 km/h speed signs.</li>
+<li><b>AI training.</b> A modified PilotNet (NVIDIA's end-to-end steering model) with 5 convolutional and 4 fully connected layers predicts steering and throttle from the camera image. Because the data was biased toward straight driving, excess near-zero-steering samples were removed and images were flipped to balance it. YOLOv4-Tiny detects the labelled objects.</li>
+<li><b>Integration and testing.</b> The steering model and the object detector run together in a Python script, and the remote can take over at any time. Sidewalk tests covered vehicles, pedestrians, stop signs and speed signs.</li>
+</ol>
+<h2>Results</h2>
+<p>The project documentation describes the sidewalk tests but reports no quantitative metrics. [Add your own results here, for example success per scenario or a link to the demo video.]</p>
+<h2>Future work</h2>
+<ul>
+<li>Add at least three more cameras for 360-degree awareness.</li>
+<li>Collect more training data.</li>
+<li>Extend object detection to school zones, bicycles, one-way and merge signs.</li>
+<li>Add an LSTM memory model alongside the CNN for time-dependent predictions.</li>
+</ul>
+<h2>Code</h2>
+<p class="links"><a href="https://github.com/lamfur07/Autonomous_Driving_Platform" rel="noopener noreferrer">GitHub: Autonomous_Driving_Platform</a></p>
+<nav class="pager"><a href="../../index.html#projects">&larr; All projects</a></nav>
+</main>
+<footer><div class="wrap">&copy; Alzaib Karovalia. Static site: no cookies, no analytics, no third-party scripts.</div></footer>
+</body></html>

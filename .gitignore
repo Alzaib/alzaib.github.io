@@ -1,0 +1,10 @@
+# secrets and local config: never commit these
+.env
+.env.*
+*.pem
+*.key
+*secret*
+*credentials*
+*token*
+.DS_Store
+Thumbs.db

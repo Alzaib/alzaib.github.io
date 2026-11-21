@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Flappy Bird on a Tiva C microcontroller | Alzaib Karovalia</title>
+<link rel="stylesheet" href="../../style.css"></head>
+<body>
+<header class="site"><div class="wrap"><a class="brand" href="../../index.html">Alzaib Karovalia</a>
+<nav><a href="../../index.html">Home</a><a href="../../index.html#projects">Projects</a></nav></div></header>
+<main class="wrap">
+<p class="meta"><a href="../../index.html#projects">&larr; All projects</a></p>
+<h1>Flappy Bird on a Tiva C Microcontroller</h1>
+<p class="meta">August 2021 &middot; team project for MSE 450, Real-time embedded control systems</p>
+<h2>Summary</h2>
+<p>A Flappy Bird game written in C for the Tiva C microcontroller, using a Nokia 5110 LCD, a button, a UART password prompt, an ADC potentiometer that sets the difficulty, and LEDs for game status. Release 1.0 ran on a Tiva C simulator; Release 2.0 fixed bugs and added a custom PCB shield designed for real hardware.</p>
+<h2>Motivation</h2>
+<p>The purpose was to practise integrating microcontroller features: buttons, a display, the analog-to-digital converter, registers and more. A mini game uses all of them, including a pole-generation algorithm, user input, output and score storage.</p>
+<h2>Game design</h2>
+<p>The game is a state machine with five states:</p>
+<ol>
+<li><b>PASSWORD:</b> asks for a password over UART and only continues if it is correct.</li>
+<li><b>START:</b> the screen alternates between the logo and a prompt to press a switch.</li>
+<li><b>FLAP:</b> reads input, updates the bird with input and gravity, generates and moves poles, checks collisions, scores points and refreshes the screen.</li>
+<li><b>HIT:</b> shows a hit message.</li>
+<li><b>END:</b> shows the score against the top score, then returns to START.</li>
+</ol>
+<figure><img src="../../assets/flappy-bird-tiva-c/state-flow.png" alt="State flow diagram of the game"><figcaption>Game state flow.</figcaption></figure>
+<h2>Release 1.0: software</h2>
+<p>Images are bitmaps drawn on the Nokia 5110 LCD. Each button press moves the bird up 2 pixels and otherwise gravity pulls it down. Six pole sizes are generated at a fixed interval, move right to left, and the program checks for collisions with the poles, the sky and the ground.</p>
+<figure><img src="../../assets/flappy-bird-tiva-c/gameplay.png" alt="Gameplay in the simulator"><figcaption>Gameplay in the Tiva C simulator.</figcaption></figure>
+<figure><img src="../../assets/flappy-bird-tiva-c/hit-screen.png" alt="Hit screen in the simulator"><figcaption>The hit screen.</figcaption></figure>
+<h2>Release 2.0: software and PCB</h2>
+<ul>
+<li><b>LEDs:</b> two LEDs on port B show when a game is being played and when the player scores.</li>
+<li><b>Gravity slider:</b> a potentiometer on the ADC sets gravity, and so the difficulty, in three levels.</li>
+<li><b>PCB shield:</b> sockets for the Tiva C, two LEDs and resistors, a control switch, and the power, ground and logic connections for the Nokia screen. It was designed in Altium, with pins matching the simulator setup.</li>
+</ul>
+<figure><img src="../../assets/flappy-bird-tiva-c/pcb-shield.png" alt="3D view of the PCB shield"><figcaption>3D view of the PCB shield.</figcaption></figure>
+<h2>Future work</h2>
+<ul>
+<li>Read input with an external interrupt instead of polling in the main loop, so no presses are missed.</li>
+<li>Replace delay loops with timer interrupts.</li>
+<li>Add sound using the DAC.</li>
+</ul>
+<h2>Code</h2>
+<p class="links"><a href="https://github.com/Alzaib/FlappyBird_TivaC" rel="noopener noreferrer">GitHub: FlappyBird_TivaC</a></p>
+<nav class="pager"><a href="../../index.html#projects">&larr; All projects</a></nav>
+</main>
+<footer><div class="wrap">&copy; Alzaib Karovalia. Static site: no cookies, no analytics, no third-party scripts.</div></footer>
+</body></html>

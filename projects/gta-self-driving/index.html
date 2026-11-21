@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Self-driving vehicle in GTA-V | Alzaib Karovalia</title>
+<link rel="stylesheet" href="../../style.css"></head>
+<body>
+<header class="site"><div class="wrap"><a class="brand" href="../../index.html">Alzaib Karovalia</a>
+<nav><a href="../../index.html">Home</a><a href="../../index.html#projects">Projects</a></nav></div></header>
+<main class="wrap">
+<p class="meta"><a href="../../index.html#projects">&larr; All projects</a></p>
+<h1>Building a Self-Driving Vehicle in GTA-V Using Deep Learning and a Convolutional Neural Network</h1>
+<p class="meta">September 2020</p>
+<h2>Summary</h2>
+<p>A self-driving vehicle built inside the video game GTA-V, using behaviour cloning with NVIDIA's PilotNet to predict steering and throttle from the hood camera, and a YOLOv3-Tiny object detector to slow or brake for vehicles and pedestrians ahead. Each network was trained on Google Colab with Keras.</p>
+<figure><img src="../../assets/gta-self-driving/hood-camera.png" alt="Hood camera view in GTA-V on a highway"><figcaption>The hood-camera view used for data collection and for the network's input.</figcaption></figure>
+<h2>Goal</h2>
+<p>The goal is to navigate highway and city-like environments with different traffic densities, using a self-generated dataset and an object detector for both lateral (steering) and longitudinal (throttle and braking) control. A game gives high-quality graphics, different weather and traffic conditions, and unexpected behaviour from nearby vehicles, without any hardware or risk.</p>
+<h2>Dataset</h2>
+<ul>
+<li><b>Generation:</b> driving from the first-person hood camera with an Xbox controller for a few hours, recording grayscale 160×120 frames with steering (−1 to 1) and throttle (−1 to 1). The result is 100,000 labelled images.</li>
+<li><b>Balancing:</b> most data lies near steering angle 0 because the car mostly drives straight, which would bias the network. Bins were capped at 4,000 samples, leaving 39,046 images.</li>
+<li><b>Augmentation:</b> flipping each image horizontally and negating its steering angle doubled the set to 78,092 images. Random shifts, brightness and zoom were applied during training.</li>
+</ul>
+<figure><img src="../../assets/gta-self-driving/steering-unbalanced.png" alt="Steering and throttle distribution before balancing"><figcaption>Steering (left) and throttle (right) distribution before balancing.</figcaption></figure>
+<figure><img src="../../assets/gta-self-driving/steering-balanced.png" alt="Steering and throttle distribution after balancing"><figcaption>The same distributions after balancing.</figcaption></figure>
+<h2>Model and training</h2>
+<p>Three networks were compared (PilotNet, ResNet-50 and VGG-19), and PilotNet was chosen for its fast predictions. It has 5 convolutional layers, 3 fully connected layers and a normalisation layer, and a second output neuron was added so it predicts both steering angle and throttle. It is trained as a regression problem with the Adam optimiser on mean squared error, at a learning rate of 0.001, using 62,474 images for training and 15,618 for validation.</p>
+<p>At run time a Python script takes a screenshot of the game, pre-processes it, runs the network and sends the predicted steering and throttle to a virtual Xbox controller (vJoy).</p>
+<h2>Adding object detection (YOLOv3)</h2>
+<p>Behaviour cloning alone drove fairly well but often collided with other vehicles without braking. A pretrained YOLOv3-Tiny, restricted to cars, trucks, people, motorcycles, buses, trains and stop signs, was added. The distance to a detected object is estimated from the size of its bounding box: if it is too close, the throttle is set to −1, the steering to 0 and the brake is applied; if it is nearby, the throttle is reduced a lot; if it is far, a little.</p>
+<p>The first version stopped whenever any vehicle was detected, including cars in other lanes and parked cars. Running the detector only on a central region of interest of the frame fixed this.</p>
+<figure><img src="../../assets/gta-self-driving/yolo-detection.png" alt="YOLO detections with distance labels in GTA-V"><figcaption>YOLOv3-Tiny detections used to slow the car.</figcaption></figure>
+<figure><img src="../../assets/gta-self-driving/roi-highway.png" alt="Region of interest on a highway frame"><figcaption>The region of interest (centre of the frame) on the highway.</figcaption></figure>
+<h2>Results and future work</h2>
+<p>The integrated system showed that a self-driving car can be built and simulated with computer vision and deep learning, though more research is needed before it would be realistic for an actual car.</p>
+<ul>
+<li>Higher-resolution images and a more diverse dataset (most data came from highway driving).</li>
+<li>CNN plus LSTM, so predictions depend on previous outputs and the car can tell a parked vehicle from a moving one.</li>
+</ul>
+<h2>Code</h2>
+<p class="links"><a href="https://github.com/Alzaib/Autonomous-Self-Driving-Car-GTA-5" rel="noopener noreferrer">GitHub: Autonomous-Self-Driving-Car-GTA-5</a></p>
+<nav class="pager"><a href="../../index.html#projects">&larr; All projects</a></nav>
+</main>
+<footer><div class="wrap">&copy; Alzaib Karovalia. Static site: no cookies, no analytics, no third-party scripts.</div></footer>
+</body></html>

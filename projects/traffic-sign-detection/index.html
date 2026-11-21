@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Traffic sign detection with YOLO and a custom CNN | Alzaib Karovalia</title>
+<link rel="stylesheet" href="../../style.css"></head>
+<body>
+<header class="site"><div class="wrap"><a class="brand" href="../../index.html">Alzaib Karovalia</a>
+<nav><a href="../../index.html">Home</a><a href="../../index.html#projects">Projects</a></nav></div></header>
+<main class="wrap">
+<p class="meta"><a href="../../index.html#projects">&larr; All projects</a></p>
+<h1>Traffic Sign Detection using TensorFlow and YOLOv3 / YOLOv4</h1>
+<p class="meta">April 2021</p>
+<h2>Summary</h2>
+<p>A two-stage traffic sign pipeline: YOLO detects where signs are, and a custom convolutional neural network (CNN) classifies each detected sign into one of 43 classes. The CNN reaches 95% accuracy on the test set. The pipeline runs on an NVIDIA Jetson Nano, at 1.53 detections per second with YOLOv3 and 7.72 per second with YOLOv4-Tiny.</p>
+<h2>Idea</h2>
+<p>Labelling and training a large detection dataset takes a lot of time. Instead, detection is trained once for a single main class (signs), and separate classification models are trained to sort detections into sub-classes such as speed limits or stop signs. Training a classifier is easier and faster than retraining a detector.</p>
+<figure><img src="../../assets/traffic-sign-detection/overview.png" alt="Project overview: one detection model feeding several classification models"><figcaption>One detection model for the main class, feeding several classification models.</figcaption></figure>
+<h2>Detection with YOLO</h2>
+<p>YOLOv3 and YOLOv4-Tiny were trained on the German traffic sign dataset, which has 4 classes (prohibitory, danger, mandatory and other), using Darknet on Google Colab. The architecture was modified from 80 COCO classes to 4, which changes the number of filters at the output layers from 255 to 27, and training continued from downloaded pretrained weights.</p>
+<h2>Classification with a custom CNN</h2>
+<ul>
+<li><b>Data:</b> 43 sign classes at 32×32 pixels. The classes were unbalanced, so each class was capped at 250 images, which removed more than half of the data. The set was then expanded with random zoom, pan and brightness changes.</li>
+<li><b>Model:</b> 5 convolutional layers and 4 dense layers built in Keras and TensorFlow, trained with a learning rate of 0.0001, categorical cross-entropy, batch size 32 and 10 epochs.</li>
+<li><b>Result:</b> 95% accuracy on the test set. A lower accuracy is expected in real-time use because of the low image quality in the dataset.</li>
+</ul>
+<figure><img src="../../assets/traffic-sign-detection/balanced-expanded.png" alt="Class distribution after balancing and augmentation"><figcaption>Class distribution after balancing and augmentation.</figcaption></figure>
+<figure><img src="../../assets/traffic-sign-detection/cnn-training.png" alt="Training and validation accuracy and loss"><figcaption>Training and validation accuracy and loss.</figcaption></figure>
+<h2>Real-time results on a Jetson Nano</h2>
+<p>Both detectors worked on the Jetson Nano, using previously saved images since no camera was available. Speed and accuracy were then tested on a live video feed. The classification model is the same for both, so its accuracy is similar.</p>
+<table>
+<tr><th>Detector</th><th class="num">Detection rate</th><th>Observation</th></tr>
+<tr><td>YOLOv3</td><td class="num">1.53 per second</td><td>More accurate; detects more signs</td></tr>
+<tr><td>YOLOv4-Tiny</td><td class="num">7.72 frames per second</td><td>Much faster; less accurate</td></tr>
+</table>
+<figure><img src="../../assets/traffic-sign-detection/yolov3-live.png" alt="YOLOv3 detections on a live video feed"><figcaption>YOLOv3 on a live video feed.</figcaption></figure>
+<figure><img src="../../assets/traffic-sign-detection/yolov4tiny-live.png" alt="YOLOv4-Tiny detections on a live video feed"><figcaption>YOLOv4-Tiny on the same feed.</figcaption></figure>
+<h2>Takeaways and limits</h2>
+<ul>
+<li>As a proof of concept, classification can be added on top of one detection model, and the pipeline runs on an embedded computer.</li>
+<li>YOLOv3 is more accurate but slower; YOLOv4-Tiny trades accuracy for speed.</li>
+<li>The CNN makes some wrong predictions because 32×32 images are low quality and the network is only a few layers deep.</li>
+</ul>
+<h2>Code</h2>
+<p class="links"><a href="https://github.com/Alzaib/Traffic-Signs-Detection-Tensorflow-YOLOv3-YOLOv4" rel="noopener noreferrer">GitHub: Traffic-Signs-Detection-Tensorflow-YOLOv3-YOLOv4</a></p>
+<nav class="pager"><a href="../../index.html#projects">&larr; All projects</a></nav>
+</main>
+<footer><div class="wrap">&copy; Alzaib Karovalia. Static site: no cookies, no analytics, no third-party scripts.</div></footer>
+</body></html>
